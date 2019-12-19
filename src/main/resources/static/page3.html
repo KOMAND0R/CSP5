@@ -1,0 +1,269 @@
+<button onclick="addStudent()" style="margin-left: 100px; margin-bottom: 20px">Добавить студента</button>
+<script>
+    const host = "http://localhost:8080/api/students";
+    let revertArr = [];
+    let canAdd = true;
+
+    function addRow(student) {
+        let margin = "margin: 5px;";
+        let div = document.createElement("div");
+        div.setAttribute("id", `div${student.id}`);
+
+        let changeButton = document.createElement("button");
+        changeButton.innerHTML = "Изменить";
+        changeButton.setAttribute("id", `ch${student.id}`);
+        changeButton.setAttribute("onclick", "changeRow(event)");
+        changeButton.setAttribute("style", margin);
+
+        let deleteButton = document.createElement("button");
+        deleteButton.innerHTML = "Удалить";
+        deleteButton.setAttribute("id", `del${student.id}`);
+        deleteButton.setAttribute("onclick", "deleteRow(event)");
+        deleteButton.setAttribute("style", margin);
+
+        let fioInput = document.createElement("input");
+        fioInput.setAttribute("id", `fio${student.id}`);
+        fioInput.setAttribute("readonly", null);
+        fioInput.placeholder = "SomeText";
+        fioInput.setAttribute("style", margin);
+        fioInput.value = student.fio;
+
+        let groupInput = document.createElement("input");
+        groupInput.setAttribute("id", `gr${student.id}`);
+        groupInput.setAttribute("readonly", null);
+        groupInput.setAttribute("style", margin);
+        groupInput.value = student.group;
+
+        let unInput = document.createElement("input");
+        groupInput.setAttribute("id", `un${student.id}`);
+        groupInput.setAttribute("readonly", null);
+        groupInput.setAttribute("style", margin);
+        unInput.value = student.unName;
+
+        div.appendChild(fioInput);
+        div.appendChild(groupInput);
+        div.appendChild(unInput);
+        div.appendChild(changeButton);
+        div.appendChild(deleteButton);
+
+        document.body.append(div);
+    }
+
+    function changeRow(event) {
+        let id = event.target.id.match(/(\d+)/)[0];
+
+        let changeButton = event.target;
+        let deleteButton = document.getElementById(`del${id}`);
+        let fioInput = document.getElementById(`fio${id}`);
+        let groupInput = document.getElementById(`gr${id}`);
+        let unInput = document.getElementById(`un${id}`);
+
+        fioInput.removeAttribute("readonly");
+        groupInput.removeAttribute("readonly");
+        unInput.removeAttribute("readonly");
+
+        deleteButton.innerHTML = "Вернуться";
+        deleteButton.setAttribute("onclick", "revertRow(event)");
+
+        changeButton.innerHTML = "Обновить";
+        changeButton.setAttribute("onclick", "updateRow(event)");
+
+        revertArr.push({ id: id, fio: fioInput.value, group: groupInput.value, unName: unInput.value })
+    }
+
+    async function deleteRow(event) {
+        let id = event.target.id.match(/(\d+)/)[0];
+        try {
+            const response = await fetch(`${host}/${id}`, { method: 'DELETE' });
+            const status = await response.status;
+            if (status === 200) {
+                let div = document.getElementById(`div${id}`);
+                div.parentNode.removeChild(div);
+            } else {
+                alert('Упс. Что-то пошло не так');
+            }
+        } catch {
+            alert('Кажется сервер не отвечает');
+        }
+    }
+
+    async function updateRow(event) {
+        let id = event.target.id.match(/(\d+)/)[0];
+
+        let changeButton = event.target;
+        let deleteButton = document.getElementById(`del${id}`);
+        let fioInput = document.getElementById(`fio${id}`);
+        let groupInput = document.getElementById(`gr${id}`);
+        let unInput = document.getElementById(`un${id}`);
+
+        try {
+            let student = { id: id, fio: fioInput.value, group: groupInput.value, unName: unInput.value };
+            if (notEmpty(student)) {
+                const response = await fetch(`${host}/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(student) });
+                const status = await response.status;
+                if (status === 200) {
+                    fioInput.setAttribute("readonly", null);
+                    groupInput.setAttribute("readonly", null);
+                    unInput.setAttribute("readonly", null);
+
+                    changeButton.innerHTML = "Изменить";
+                    changeButton.setAttribute("onclick", "changeRow(event)");
+
+                    deleteButton.innerHTML = "Удалить";
+                    deleteButton.setAttribute("onclick", "deleteRow(event)");
+                } else {
+                    alert('Упс. Что-то пошло не так');
+                }
+            } else {
+                alert('Требуется заполнить все поля');
+            }
+        } catch {
+            alert('Кажется сервер не отвечает');
+        }
+    }
+
+    function revertRow(event) {
+        let id = event.target.id.match(/(\d+)/)[0];
+        revertArr.forEach(
+            function (element, index) {
+                if (element.id === id) {
+                    let deleteButton = event.target;
+                    let changeButton = document.getElementById(`ch${id}`);
+                    let fioInput = document.getElementById(`fio${id}`);
+                    let groupInput = document.getElementById(`gr${id}`);
+                    let unInput = document.getElementById(`un${id}`);
+
+                    fioInput.setAttribute("readonly", null);
+                    groupInput.setAttribute("readonly", null);
+                    unInput.setAttribute("readonly", null);
+
+                    fioInput.value = element.fio;
+                    groupInput.value = element.group;
+                    unInput.value = element.unName;
+
+                    changeButton.innerHTML = "Изменить";
+                    changeButton.setAttribute("onclick", "changeRow(event)");
+
+                    deleteButton.innerHTML = "Удалить";
+                    deleteButton.setAttribute("onclick", "deleteRow(event)");
+
+                    revertArr.splice(index, index);
+                }
+            }
+        )
+    }
+
+    async function addStudent() {
+        if (canAdd) {
+            let margin = "margin: 5px;";
+            let div = document.createElement("div");
+            div.setAttribute("id", `newStudent`);
+
+            let acceptButton = document.createElement("button");
+            acceptButton.innerHTML = "Подтвердить";
+            acceptButton.setAttribute("id", `ac`);
+            acceptButton.setAttribute("onclick", "accept()");
+            acceptButton.setAttribute("style", margin);
+
+            let cancelButton = document.createElement("button");
+            cancelButton.innerHTML = "Отмена";
+            cancelButton.setAttribute("id", `can`);
+            cancelButton.setAttribute("onclick", "cancel()");
+            cancelButton.setAttribute("style", margin);
+
+            let fioInput = document.createElement("input");
+            fioInput.setAttribute("id", `fio`);
+            fioInput.setAttribute("style", margin);
+            fioInput.setAttribute("placeholder", "ФИО");
+
+            let groupInput = document.createElement("input");
+            groupInput.setAttribute("id", `gr`);
+            groupInput.setAttribute("style", margin);
+            groupInput.setAttribute("placeholder", "Группа");
+
+            let unInput = document.createElement("input");
+            unInput.setAttribute("id", `un`);
+            unInput.setAttribute("style", margin);
+            unInput.setAttribute("placeholder", "ВУЗ");
+
+            div.appendChild(fioInput);
+            div.appendChild(groupInput);
+            div.appendChild(unInput);
+            div.appendChild(acceptButton);
+            div.appendChild(cancelButton);
+
+            document.body.append(div);
+            canAdd = false;
+        } else {
+            alert("Вы не заполнили или не добавили прошлую строку");
+        }
+    }
+
+    async function accept() {
+        let div = document.getElementById(`newStudent`);
+        let acceptButton = document.getElementById(`ac`);
+        let cancelButton = document.getElementById(`can`);
+        let fioInput = document.getElementById(`fio`);
+        let groupInput = document.getElementById(`gr`);
+        let unInput = document.getElementById('un');
+
+        try {
+            let student = { fio: fioInput.value, group: groupInput.value, unName: unInput.value };
+            if (notEmpty(student)) {
+                const response = await fetch(`${host}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(student) });
+                const status = await response.status;
+
+                if (status === 200) {
+                    const json = await response.json();
+
+                    div.setAttribute("id", `div${json.id}`);
+
+                    fioInput.setAttribute("id", `fio${json.id}`);
+                    fioInput.setAttribute("readonly", null);
+
+                    groupInput.setAttribute("id", `gr${json.id}`);
+                    groupInput.setAttribute("readonly", null);
+
+                    unInput.setAttribute("id", `un${json.id}`);
+                    unInput.setAttribute("readonly", null);
+
+                    acceptButton.setAttribute("id", `ch${json.id}`);
+                    acceptButton.innerHTML = "Изменить";
+                    acceptButton.setAttribute("onclick", "changeRow(event)");
+
+                    cancelButton.setAttribute("id", `del${json.id}`);
+                    cancelButton.innerHTML = "Удалить";
+                    cancelButton.setAttribute("onclick", "deleteRow(event)");
+                    canAdd = true;
+                } else {
+                    alert('Упс. Что-то пошло не так');
+                }
+            } else {
+                alert('Требуется заполнить все поля');
+            }
+        } catch {
+            alert('Кажется сервер не отвечает');
+        }
+    }
+
+    function cancel() {
+        let div = document.getElementById(`newStudent`);
+        div.parentNode.removeChild(div);
+        canAdd = true;
+    }
+
+    async function loadData() {
+        try {
+            const response = await fetch(`${host}`);
+            const json = await response.json();
+            json.forEach(it => addRow(it));
+        } catch {
+            alert('Кажется сервер не отвечает');
+        }
+    }
+    function notEmpty(student) {
+        return !(student.fio === "" || student.group === "" || student.unName === "");
+    }
+
+    loadData();
+</script>
